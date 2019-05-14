@@ -1,17 +1,17 @@
-# ASP.NET Core
-# Build and test ASP.NET Core projects targeting .NET Core.
-# Add steps that run tests, create a NuGet package, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
-
-trigger:
-- master
-
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  buildConfiguration: 'Release'
-
 steps:
-- script: dotnet build --configuration $(buildConfiguration)
-  displayName: 'dotnet build $(buildConfiguration)'
+- script: 'VERSION_PREFIX=$(sed -n ''s/.*<VersionPrefix>\([^<]*\)<\/VersionPrefix>.*/\1/p'' <<< cat ./build/common.props)
+      VERSION_SUFFIX=$Build.BuildId
+      VERSION="$VERSION_PREFIX.$VERSION_SUFFIX"
+      echo "Version: $VERSION"'
+  displayName: 'Version'
+- script: docker build --target testrunner -t foundatio:test --build-arg VERSION_SUFFIX=${VERSION_SUFFIX} .
+  displayName: 'Build'
+- script: docker run --net=host -v $(pwd)/artifacts:/app/artifacts foundatio:test
+  displayName: 'Tests'
+- script: docker build --target pack -t foundatio:pack --build-arg VERSION_SUFFIX=${VERSION_SUFFIX} .
+  displayName: 'Build Pack'
+- script: docker run --rm -v $(pwd)/artifacts:/app/artifacts foundatio:pack
+  displayName: 'Pack'
