@@ -6,11 +6,16 @@ steps:
   displayName: 'Build'
   env:
     VERSION_SUFFIX: $(Build.BuildId)-pre
-- script: docker run --net=host -v $(pwd)/artifacts:/app/artifacts foundatio:test
+- script: docker run --net=host -v $(Build.ArtifactStagingDirectory):/app/artifacts foundatio:test
   displayName: 'Tests'
 - script: docker build --target pack -t foundatio:pack --build-arg VERSION_SUFFIX=${VERSION_SUFFIX} .
   displayName: 'Build Pack'
   env:
     VERSION_SUFFIX: $(Build.BuildId)-pre
-- script: docker run --rm -v $(pwd)/artifacts:/app/artifacts foundatio:pack
+- script: docker run --rm -v $(Build.ArtifactStagingDirectory):/app/artifacts foundatio:pack
   displayName: 'Pack'
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'Packages'
+    publishLocation: 'Container'
